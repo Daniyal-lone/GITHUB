@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PIRATES HIVE | ELITE OS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root { --gold: #ffbc00; --bg: #030303; }
+        body { 
+            background: var(--bg); color: white; font-family: 'Syncopate', sans-serif;
+            overflow-x: hidden; scroll-behavior: smooth; -webkit-tap-highlight-color: transparent;
+        }
+        .pirate-title { font-family: 'Pirata One', cursive; }
+        
+        /* Obsidian Glassmorphism */
+        .obsidian { background: rgba(15, 15, 15, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 188, 0, 0.15); }
+        .neon-border { box-shadow: 0 0 15px rgba(255, 188, 0, 0.2); }
+        
+        /* High-Speed UI Optimizations */
+        button { transition: transform 0.1s active; touch-action: manipulation; }
+        button:active { transform: scale(0.95); }
+        
+        /* AR Hologram Layer */
+        #ar-portal { display: none; position: fixed; inset: 0; z-index: 500; background: #000; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 0px; }
+        
+        .gold-glow { text-shadow: 0 0 10px rgba(255, 188, 0, 0.8); }
+    </style>
+</head>
+<body class="max-w-md mx-auto min-h-screen">
+
+    <div id="ar-portal">
+        <div class="absolute top-10 left-6 z-[510] flex items-center space-x-4">
+            <button onclick="togglePortal(false)" class="p-3 obsidian rounded-full">✕</button>
+            <span class="text-[10px] tracking-[0.3em] gold-text">SYSTEM_AR_ACTIVE</span>
+        </div>
+        <model-viewer id="ar-view" src="burger.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls shadow-intensity="2" auto-rotate>
+            <button slot="ar-button" class="absolute bottom-12 left-1/2 -translate-x-1/2 bg-white text-black px-10 py-5 rounded-full font-black text-[10px] tracking-widest">DEPLOY_HOLOGRAM</button>
+        </model-viewer>
+    </div>
+
+    <div id="main-ui" class="p-6 pb-32">
+        <header class="py-10 text-center relative">
+            <h1 class="pirate-title text-6xl gold-glow text-yellow-500 mb-2">The Pirates Hive</h1>
+            <p class="text-[8px] tracking-[0.6em] opacity-40 uppercase">Baramulla Quarter // Secure_Link</p>
+        </header>
+
+        <div class="flex space-x-2 mb-10">
+            <button onclick="tab('menu')" id="t-menu" class="flex-1 py-4 obsidian rounded-2xl text-[9px] font-black gold-text border-b-2 border-yellow-500">GALLEY_MENU</button>
+            <button onclick="tab('bill')" id="t-bill" class="flex-1 py-4 obsidian rounded-2xl text-[9px] font-black opacity-30">MERCHANT_BILL (<span id="cart-count">0</span>)</button>
+        </div>
+
+        <div id="v-menu" class="space-y-4">
+            <div id="menu-grid" class="grid grid-cols-1 gap-4">
+                </div>
+        </div>
+
+        <div id="v-bill" class="hidden space-y-6">
+            <div id="bill-items" class="space-y-3"></div>
+            
+            <div class="obsidian p-6 rounded-[30px] space-y-6">
+                <div>
+                    <p class="text-[9px] opacity-40 mb-4 uppercase tracking-[0.2em]">Transaction_Mode</p>
+                    <div class="flex space-x-2">
+                        <button onclick="setMode('UPI')" id="m-upi" class="flex-1 py-4 rounded-xl text-[10px] obsidian border-yellow-500 font-bold gold-text">NEURAL_UPI</button>
+                        <button onclick="setMode('CASH')" id="m-cash" class="flex-1 py-4 rounded-xl text-[10px] obsidian opacity-40 font-bold">PHYSICAL_CREDIT</button>
+                    </div>
+                </div>
+                
+                <div class="pt-6 border-t border-white/5">
+                    <div class="flex justify-between text-[10px] opacity-50 mb-2"><span>SUBTOTAL</span><span id="sub-val">₹0</span></div>
+                    <div id="disc-row" class="hidden flex justify-between text-[10px] text-green-500 mb-2"><span>BOUNTY_DEDUCTION</span><span id="disc-val">-₹0</span></div>
+                    <div class="flex justify-between items-end">
+                        <span class="text-[10px] font-black">TOTAL_DUE</span>
+                        <span id="total-val" class="text-3xl font-black gold-glow text-yellow-500">₹0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="fixed bottom-0 left-0 right-0 p-6 obsidian border-t border-yellow-500/20 max-w-md mx-auto z-[100]">
+        <div id="bounty-gate" class="mb-4">
+            <button onclick="openInsta()" class="w-full py-4 rounded-2xl bg-yellow-500/5 border border-yellow-500/30 text-[9px] font-black tracking-[0.2em] gold-text">
+                [ CLAIM_DISCOUNT_FOLLOW_@DANIYAL.LONE ]
+            </button>
+        </div>
+        <button onclick="sendOrder()" class="w-full py-6 rounded-full bg-yellow-500 text-black font-black text-xs tracking-[0.3em] shadow-[0_10px_30px_rgba(255,188,0,0.3)] uppercase">
+            Execute_Order_Anchor
+        </button>
+    </div>
+
+    <script>
+        const treasures = [
+            { id: 1, name: 'Zinger Captain', price: 249, model: 'burger.glb', meta: 'SIGNATURE' },
+            { id: 2, name: 'Treasure Pizza', price: 399, model: 'burger.glb', meta: 'LARGE' },
+            { id: 3, name: 'Sea Salt Fries', price: 129, model: 'burger.glb', meta: 'PERI-PERI' },
+            { id: 4, name: 'Pirate Coffee', price: 149, model: 'burger.glb', meta: 'ICE_COLD' }
+        ];
+
+        let loot = [];
+        let payMode = 'UPI';
+        let bountyPercent = 0;
+
+        function tab(t) {
+            document.getElementById('v-menu').classList.toggle('hidden', t === 'bill');
+            document.getElementById('v-bill').classList.toggle('hidden', t === 'menu');
+            document.getElementById('t-menu').style.opacity = t === 'menu' ? '1' : '0.3';
+            document.getElementById('t-bill').style.opacity = t === 'bill' ? '1' : '0.3';
+        }
+
+        const grid = document.getElementById('menu-grid');
+        treasures.forEach(t => {
+            const card = document.createElement('div');
+            card.className = "obsidian p-5 rounded-[30px] flex justify-between items-center neon-border";
+            card.innerHTML = `
+                <div>
+                    <span class="text-[7px] text-yellow-500 font-bold tracking-[0.3em] uppercase opacity-60">${t.meta}</span>
+                    <h3 class="text-sm font-black uppercase tracking-wider">${t.name}</h3>
+                    <p class="text-yellow-500 font-black">₹${t.price}</p>
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="togglePortal(true, '${t.model}')" class="w-12 h-12 obsidian rounded-full flex items-center justify-center text-lg">🌌</button>
+                    <button onclick="addLoot(${t.id})" class="bg-yellow-500 text-black px-5 py-3 rounded-2xl font-black text-[9px] uppercase tracking-widest">ADD +</button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+
+        function addLoot(id) {
+            loot.push(treasures.find(t => t.id === id));
+            updateBill();
+            const counter = document.getElementById('cart-count');
+            counter.classList.add('scale-150');
+            setTimeout(() => counter.classList.remove('scale-150'), 200);
+        }
+
+        function updateBill() {
+            document.getElementById('cart-count').innerText = loot.length;
+            const list = document.getElementById('bill-items');
+            list.innerHTML = '';
+            let sub = 0;
+            loot.forEach((item, idx) => {
+                sub += item.price;
+                const row = document.createElement('div');
+                row.className = "obsidian p-4 rounded-2xl flex justify-between items-center";
+                row.innerHTML = `<span class="text-[10px] font-bold">${item.name}</span> <div class="flex items-center space-x-4"><span class="text-[10px]">₹${item.price}</span> <button onclick="dropLoot(${idx})" class="text-red-500">✕</button></div>`;
+                list.appendChild(row);
+            });
+            const discVal = Math.round(sub * (bountyPercent/100));
+            document.getElementById('sub-val').innerText = `₹${sub}`;
+            document.getElementById('disc-val').innerText = `-₹${discVal}`;
+            document.getElementById('total-val').innerText = `₹${sub - discVal}`;
+            if(bountyPercent > 0) document.getElementById('disc-row').classList.remove('hidden');
+        }
+
+        function dropLoot(idx) { loot.splice(idx, 1); updateBill(); }
+
+        function openInsta() {
+            window.open('https://instagram.com/daniyal.lone', '_blank');
+            setTimeout(() => {
+                if(confirm("VERIFY BOUNTY STATUS?")) {
+                    bountyPercent = 10;
+                    confetti({ particleCount: 200, spread: 100, colors: ['#ffbc00'] });
+                    document.getElementById('bounty-gate').innerHTML = `<div class="p-4 rounded-2xl border border-green-500/30 bg-green-500/10 text-center text-[8px] font-black text-green-400 tracking-[0.3em]">SYSTEM_BYPASS_COMPLETE // 10%_BOUNTY_APPLIED</div>`;
+                    updateBill();
+                }
+            }, 1000);
+        }
+
+        function togglePortal(show, file) {
+            if(file) document.getElementById('ar-view').src = file;
+            document.getElementById('ar-portal').style.display = show ? 'block' : 'none';
+        }
+
+        function setMode(m) {
+            payMode = m;
+            document.getElementById('m-upi').style.opacity = m === 'UPI' ? '1' : '0.4';
+            document.getElementById('m-cash').style.opacity = m === 'CASH' ? '1' : '0.4';
+        }
+
+        function sendOrder() {
+            if(loot.length === 0) return alert("GALLEY_EMPTY: Please add items.");
+            const phone = "919103499618";
+            const items = loot.map(i => i.name).join(', ');
+            const total = document.getElementById('total-val').innerText;
+            const text = encodeURIComponent(`⚓ PIRATE_TRANSMISSION\nCARGO: ${items}\nTOTAL_DUE: ${total}\nMETHOD: ${payMode}\n-- V3.0_SECURE_LINK`);
+            window.location.href = `https://wa.me/${phone}?text=${text}`;
+        }
+    </script>
+</body>
+</html>
