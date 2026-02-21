@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>THE PIRATES HIVE | NEON-SEA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <style>
+        :root { --neon-gold: #ffcf00; --cyber-blue: #00f3ff; }
+        body { 
+            background: radial-gradient(circle at top, #0d1117 0%, #050505 100%); 
+            font-family: 'Orbitron', sans-serif; 
+            color: white; 
+            touch-action: manipulation; /* Fixes 300ms delay */
+        }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px); border: 1px solid rgba(255, 207, 0, 0.2); }
+        .neon-glow { text-shadow: 0 0 10px var(--neon-gold), 0 0 20px var(--neon-gold); }
+        .hologram-btn { background: linear-gradient(90deg, #ffcf00 0%, #ff8a00 100%); color: black; font-weight: 900; }
+        .scanline { background: linear-gradient(to bottom, transparent 50%, rgba(255, 207, 0, 0.05) 51%); background-size: 100% 4px; pointer-events: none; }
+        
+        /* Fast Scroll Fixes */
+        #menu-container { scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+        
+        #ar-screen { display: none; position: fixed; inset: 0; z-index: 200; background: #000; }
+    </style>
+</head>
+<body class="max-w-md mx-auto min-h-screen flex flex-col overflow-x-hidden">
+    <div class="fixed inset-0 scanline z-50"></div>
+
+    <div id="ar-screen">
+        <button onclick="toggleAR(false)" class="absolute top-12 left-6 z-[210] pirate-font text-[10px] tracking-widest glass px-4 py-2 rounded-full border-gold">× ABORT MISSION</button>
+        <model-viewer id="ar-model" src="burger.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls shadow-intensity="2" auto-rotate>
+            <div slot="ar-button" class="absolute bottom-12 left-1/2 -translate-x-1/2 hologram-btn px-10 py-5 rounded-full text-xs tracking-[0.3em]">INITIATE HOLOGRAM</div>
+        </model-viewer>
+    </div>
+
+    <header class="p-10 text-center relative">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-yellow-500 blur-md opacity-30"></div>
+        <h1 class="text-4xl neon-glow font-black tracking-tighter uppercase italic">PIRATES HIVE</h1>
+        <p class="text-[8px] tracking-[0.5em] uppercase opacity-50 mt-2">Baramulla Terminal // v2.0</p>
+    </header>
+
+    <div class="flex px-6 space-x-2 mb-6">
+        <button onclick="showTab('menu')" id="t-menu" class="flex-1 py-4 glass rounded-2xl text-[10px] font-black gold-text border-yellow-500/50">SYSTEM_MENU</button>
+        <button onclick="showTab('cart')" id="t-cart" class="flex-1 py-4 glass rounded-2xl text-[10px] font-black opacity-30">CARGO_HOLD (<span id="c-count">0</span>)</button>
+    </div>
+
+    <section id="menu-view" class="px-6 space-y-4 mb-32 overflow-y-auto">
+        <div id="items-grid" class="grid grid-cols-1 gap-4">
+            </div>
+    </section>
+
+    <section id="cart-view" class="hidden px-6 mb-32">
+        <h2 class="text-xl font-black mb-6 gold-text italic">LOCKED CARGO</h2>
+        <div id="cart-list" class="space-y-4 mb-8"></div>
+        
+        <div class="glass p-6 rounded-[30px] space-y-4">
+            <h3 class="text-[10px] uppercase tracking-widest opacity-40">Payment Protocol</h3>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="setPay('UPI')" id="p-online" class="py-4 glass rounded-xl text-[10px] border-yellow-500 gold-text">NEURAL_UPI</button>
+                <button onclick="setPay('Cash')" id="p-offline" class="py-4 glass rounded-xl text-[10px] opacity-40">COUNTER_CREDITS</button>
+            </div>
+            <div class="flex justify-between text-2xl font-black pt-4 border-t border-white/10">
+                <span class="text-xs uppercase opacity-50">Total</span>
+                <span id="f-total" class="neon-glow text-yellow-500">₹0</span>
+            </div>
+        </div>
+    </section>
+
+    <footer class="fixed bottom-0 left-0 right-0 p-6 glass border-t border-yellow-500/20 max-w-md mx-auto z-[60]">
+        <div id="bounty-gate" class="mb-4">
+            <button onclick="handleFollow()" class="w-full py-4 rounded-2xl border border-yellow-500/30 text-[9px] font-black tracking-widest uppercase gold-text bg-yellow-500/5">
+                [ ⚡ CLAIM 10% INSTA-BOUNTY ]
+            </button>
+        </div>
+        <button onclick="executeOrder()" class="w-full hologram-btn py-6 rounded-[30px] text-lg italic shadow-[0_0_30px_rgba(255,207,0,0.3)]">
+            ANCHOR ORDER
+        </button>
+    </footer>
+
+    <script>
+        const shopData = [
+            { id: 1, name: 'Zinger Captain', price: 249, model: 'burger.glb', meta: 'CLASS_S' },
+            { id: 2, name: 'Treasure Pizza', price: 399, model: 'burger.glb', meta: 'ULTRA_RARE' },
+            { id: 3, name: 'Sea Salt Fries', price: 129, model: 'burger.glb', meta: 'SIDE_QUEST' },
+            { id: 4, name: 'Pirate Coffee', price: 149, model: 'burger.glb', meta: 'FUEL' }
+        ];
+
+        let cart = [];
+        let method = 'UPI';
+        let discount = 0;
+
+        function showTab(t) {
+            document.getElementById('menu-view').classList.toggle('hidden', t === 'cart');
+            document.getElementById('cart-view').classList.toggle('hidden', t === 'menu');
+            document.getElementById('t-menu').style.opacity = t === 'menu' ? '1' : '0.3';
+            document.getElementById('t-cart').style.opacity = t === 'cart' ? '1' : '0.3';
+        }
+
+        const grid = document.getElementById('items-grid');
+        shopData.forEach(item => {
+            const el = document.createElement('div');
+            el.className = "glass p-5 rounded-[30px] flex justify-between items-center";
+            el.innerHTML = `
+                <div>
+                    <span class="text-[8px] text-yellow-500 font-black tracking-widest">[ ${item.meta} ]</span>
+                    <h3 class="font-black text-sm uppercase">${item.name}</h3>
+                    <p class="font-black text-yellow-500">₹${item.price}</p>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="toggleAR(true, '${item.model}')" class="p-3 glass rounded-full border-yellow-500/30">🌌</button>
+                    <button onclick="addCargo(${item.id})" class="hologram-btn px-6 py-3 rounded-2xl text-[10px]">ADD +</button>
+                </div>
+            `;
+            grid.appendChild(el);
+        });
+
+        function addCargo(id) {
+            cart.push(shopData.find(i => i.id === id));
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('c-count').innerText = cart.length;
+            const list = document.getElementById('cart-list');
+            list.innerHTML = '';
+            let sub = 0;
+            cart.forEach((i, idx) => {
+                sub += i.price;
+                const d = document.createElement('div');
+                d.className = "glass p-4 rounded-2xl flex justify-between";
+                d.innerHTML = `<span class="text-xs font-bold">${i.name}</span> <div class="flex space-x-4"><span class="text-xs">₹${i.price}</span> <button onclick="dropCargo(${idx})">✕</button></div>`;
+                list.appendChild(d);
+            });
+            const total = Math.round(sub * (1 - discount/100));
+            document.getElementById('f-total').innerText = `₹${total}`;
+        }
+
+        function dropCargo(idx) { cart.splice(idx, 1); updateUI(); }
+
+        function handleFollow() {
+            window.open('https://instagram.com/daniyal.lone', '_blank');
+            setTimeout(() => {
+                if(confirm("VERIFY FOLLOW STATUS?")) {
+                    discount = 10;
+                    confetti({ particleCount: 150, spread: 100, colors: ['#ffcf00'] });
+                    document.getElementById('bounty-gate').innerHTML = `<div class="p-4 rounded-2xl border border-green-500 bg-green-500/10 text-center text-[10px] font-black text-green-400 tracking-widest">SYSTEM BYPASSED: 10% DISCOUNT LOADED</div>`;
+                    updateUI();
+                }
+            }, 2000);
+        }
+
+        function toggleAR(show, file) {
+            if(file) document.getElementById('ar-model').src = file;
+            document.getElementById('ar-screen').style.display = show ? 'block' : 'none';
+        }
+
+        function setPay(m) { 
+            method = m; 
+            document.getElementById('p-online').style.opacity = m === 'UPI' ? '1' : '0.4';
+            document.getElementById('p-offline').style.opacity = m === 'Cash' ? '1' : '0.4';
+        }
+
+        function executeOrder() {
+            if(!cart.length) return;
+            const phone = "919103499618";
+            const summary = cart.map(i => i.name).join(', ');
+            const total = document.getElementById('f-total').innerText;
+            const text = encodeURIComponent(`⚡ INCOMING PIRATE ORDER\nCARGO: ${summary}\nTOTAL: ${total}\nPAYMENT: ${method}\n-- Processed by Neural-Link v2.0`);
+            window.location.href = `https://wa.me/${phone}?text=${text}`;
+        }
+    </script>
+</body>
+</html>
