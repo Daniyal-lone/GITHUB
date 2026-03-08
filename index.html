@@ -1,231 +1,503 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>THE PIRATES HIVE | BARAMULLA</title>
-    <link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <style>
-        :root { --gold: #ffcc00; --neon: #00f3ff; }
-        body { background: #00050a; color: white; font-family: 'Orbitron', sans-serif; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
-        .pirate-font { font-family: 'Pirata One', cursive; }
-        .glass { background: rgba(0, 10, 20, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 204, 0, 0.2); }
-        .glitch { position: relative; color: var(--gold); animation: glitch-skew 1s infinite linear alternate-reverse; }
-        @keyframes glitch-skew { 0% { transform: skew(3deg); } 100% { transform: skew(-3deg); } }
-        .scanner-line { position: fixed; top: 0; left: 0; width: 100%; height: 2px; background: rgba(0, 243, 255, 0.2); animation: scan 4s linear infinite; z-index: 50; pointer-events: none; }
-        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
-        #ar-portal, #loot-modal, #pay-modal { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.98); }
-        button { touch-action: manipulation; }
+=====================================
+📁 index.html
+=====================================
 
-        /* ── AR Portal Fix ── */
-        #ar-portal {
-            display: none;
-            flex-direction: column;
-        }
+    SHINRA
 
-        /* model-viewer fills everything EXCEPT the top back-button bar */
-        #ar-view {
-            width: 100%;
-            flex: 1;          /* takes remaining height */
-            --poster-color: transparent;
-        }
+=====================================
+📁 src/main.tsx
+=====================================
 
-        /* The native AR button slot – push it well clear of our back button */
-        #ar-view::part(default-ar-button) {
-            bottom: 32px;
-        }
+import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
+import "./index.css";
 
-        /* Back button sits in its own bar at the very top – never overlaps */
-        #ar-back-bar {
-            width: 100%;
-            padding: 48px 24px 16px;
-            background: rgba(0,0,0,0.85);
-            display: flex;
-            align-items: center;
-            z-index: 1100;
-            flex-shrink: 0;
-        }
-    </style>
-</head>
-<body class="max-w-md mx-auto min-h-screen flex flex-col">
-    <div class="scanner-line"></div>
+createRoot(document.getElementById("root")!).render();
 
-    <div id="loot-modal" class="flex flex-col items-center justify-center p-10 text-center">
-        <div class="glass p-12 rounded-[50px] border-yellow-500 shadow-[0_0_50px_rgba(255,204,0,0.3)]">
-            <h2 class="pirate-font text-5xl text-yellow-500 mb-2">LOOT FOUND</h2>
-            <div id="chest-icon" class="text-8xl mb-12 animate-pulse">🎁</div>
-            <button onclick="revealBounty()" class="w-full py-5 bg-yellow-500 text-black font-black rounded-3xl text-xs tracking-widest uppercase">OPEN CHEST</button>
-        </div>
-    </div>
+=====================================
+📁 src/App.tsx
+=====================================
 
-    <div id="pay-modal" class="flex flex-col items-center justify-center p-6">
-        <div class="glass w-full p-8 rounded-[40px] border-cyan-500/30">
-            <h2 class="pirate-font text-4xl text-yellow-500 mb-6 text-center">Anchor Protocol</h2>
-            <div class="space-y-4 mb-10">
-                <button onclick="dispatchWA()" class="w-full py-6 rounded-2xl bg-white text-black font-black text-xs tracking-widest uppercase flex items-center justify-center space-x-3">
-                    <span>⚓ DISPATCH ORDER (WA)</span>
-                </button>
-                <button onclick="runUPI()" id="upi-btn" class="w-full py-6 rounded-2xl border border-yellow-500/40 text-yellow-500 font-black text-xs tracking-widest uppercase opacity-40">
-                    <span>⚡ SETTLE BILL (UPI)</span>
-                </button>
-            </div>
-            <button onclick="closePay()" class="w-full text-[10px] opacity-40 uppercase tracking-widest">Return to Menu</button>
-        </div>
-    </div>
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Index from "./pages/Index";
+import NotFound from "./pages/NotFound";
 
-    <!-- ── AR Portal (fixed layout, no overlap) ── -->
-    <div id="ar-portal" style="display:none; position:fixed; inset:0; z-index:1000; background:#000; flex-direction:column;">
+const queryClient = new QueryClient();
 
-        <!-- Top bar: back button – its own dedicated strip -->
-        <div id="ar-back-bar">
-            <button onclick="toggleAR(false)"
-                style="background:rgba(0,10,20,0.85); border:1px solid rgba(255,204,0,0.35);
-                       color:#ffcc00; font-family:'Orbitron',sans-serif; font-weight:900;
-                       font-size:10px; letter-spacing:.15em; text-transform:uppercase;
-                       padding:10px 22px; border-radius:999px; cursor:pointer;">
-                ✕ Back to Ship
-            </button>
-        </div>
+const App = () => (
 
-        <!-- model-viewer fills the rest – AR button renders inside here, unobstructed -->
-        <model-viewer id="ar-view"
-            src="burger.glb"
-            ar
-            ar-modes="webxr scene-viewer quick-look"
-            camera-controls
-            shadow-intensity="2"
-            auto-rotate
-            style="width:100%; flex:1; background:#000;">
+          } />
+          } />
 
-            <!-- Custom AR launch button – bottom-centre of the viewer, nothing above it -->
-            <button slot="ar-button"
-                style="position:absolute; bottom:40px; left:50%; transform:translateX(-50%);
-                       background:#ffcc00; color:#000; font-family:'Orbitron',sans-serif;
-                       font-weight:900; font-size:10px; letter-spacing:.3em;
-                       text-transform:uppercase; padding:18px 40px; border-radius:999px;
-                       border:none; cursor:pointer; white-space:nowrap;
-                       box-shadow:0 0 30px rgba(255,204,0,0.4);">
-                🪄 SHOW ON TABLE
-            </button>
-        </model-viewer>
-    </div>
+);
 
-    <header class="pt-16 pb-6 text-center">
-        <h1 class="pirate-font text-6xl text-yellow-500 leading-none glitch">The Pirates Hive</h1>
-        <p class="text-[7px] tracking-[0.5em] uppercase opacity-40 mt-2">Baramulla • Neural_Link v7.0</p>
-    </header>
+export default App;
 
-    <nav class="flex px-6 space-x-2 mb-10">
-        <button onclick="tab('m')" id="t-m" class="flex-1 py-4 glass rounded-3xl font-black text-[9px] tracking-widest text-yellow-500 border-yellow-500">GALLEY</button>
-        <button onclick="tab('b')" id="t-b" class="flex-1 py-4 glass rounded-3xl font-black text-[9px] tracking-widest opacity-30 italic">LOGBOOK (<span id="c-dot">0</span>)</button>
-    </nav>
+=====================================
+📁 src/index.css
+=====================================
 
-    <section id="v-m" class="px-6 space-y-4 mb-40">
-        <div id="m-list" class="space-y-4"></div>
-    </section>
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-    <section id="v-b" class="hidden px-6 pb-40 space-y-6">
-        <h2 class="pirate-font text-3xl text-yellow-500 italic uppercase">Current Cargo</h2>
-        <div id="b-items" class="space-y-3"></div>
-        <div class="glass p-8 rounded-[40px] space-y-6">
-            <div class="flex justify-between items-end">
-                <span class="text-[10px] font-black opacity-40 uppercase tracking-widest">Credits Due</span>
-                <span id="f-total" class="text-5xl font-black text-yellow-500 tracking-tighter">₹0</span>
-            </div>
-            <div id="d-row" class="hidden flex justify-between text-[10px] text-green-400 font-bold tracking-widest"><span>BOUNTY APPLIED</span><span id="d-val">-₹0</span></div>
-        </div>
-    </section>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap');
 
-    <footer class="fixed bottom-0 left-0 right-0 p-6 glass border-t border-yellow-500/10 max-w-md mx-auto z-[500]">
-        <div id="f-box" class="mb-4">
-            <button onclick="startInsta()" class="w-full py-4 rounded-2xl bg-cyan-500/5 border border-cyan-500/20 text-[9px] font-black text-cyan-400 tracking-[0.4em] uppercase">[ CLAIM 10% BOUNTY ]</button>
-        </div>
-        <button onclick="openPay()" class="w-full py-6 rounded-[35px] bg-yellow-500 text-black font-black text-[11px] tracking-[0.4em] uppercase shadow-[0_15px_50px_rgba(255,204,0,0.2)]">EXECUTE MISSION</button>
-    </footer>
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 40 10% 92%;
+    --card: 0 0% 7%;
+    --card-foreground: 40 10% 92%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 40 10% 92%;
+    --primary: 43 96% 56%;
+    --primary-foreground: 0 0% 4%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 40 10% 80%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 50%;
+    --accent: 185 100% 50%;
+    --accent-foreground: 0 0% 4%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 43 96% 56%;
+    --radius: 1rem;
+    --gold: 43 96% 56%;
+    --gold-dim: 43 60% 40%;
+    --silver: 0 0% 75%;
+    --font-display: 'Playfair Display', serif;
+    --font-body: 'Outfit', sans-serif;
+    --glass-bg: hsla(0, 0%, 7%, 0.7);
+    --glass-border: hsla(43, 96%, 56%, 0.12);
+    --glow-gold: 0 0 40px hsla(43, 96%, 56%, 0.15);
+    --glow-accent: 0 0 30px hsla(185, 100%, 50%, 0.1);
+  }
+}
 
-    <script>
-        const inventory = [
-            { id: 1, name: 'Zinger Captain', price: 249, file: 'burger.glb', tag: 'ELITE' },
-            { id: 2, name: 'Treasure Pizza', price: 399, file: 'burger.glb', tag: 'LEGEND' },
-            { id: 3, name: 'Sea Salt Fries', price: 129, file: 'burger.glb', tag: 'SIDE' },
-            { id: 4, name: 'Stormy Coffee', price: 159, file: 'burger.glb', tag: 'FUEL' }
-        ];
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+  h1, h2, h3 { font-family: var(--font-display); }
+}
 
-        let cart = [];
-        let bounty = 0;
+@layer components {
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+  }
+  .text-gold { color: hsl(var(--gold)); }
+  .text-gold-dim { color: hsl(var(--gold-dim)); }
+  .bg-gold { background-color: hsl(var(--gold)); }
+  .border-gold { border-color: hsl(var(--gold)); }
+  .border-gold-dim { border-color: hsl(var(--gold-dim)); }
+  .glow-gold { box-shadow: var(--glow-gold); }
+  .text-silver { color: hsl(var(--silver)); }
+}
 
-        function tab(t) {
-            document.getElementById('v-m').classList.toggle('hidden', t === 'b');
-            document.getElementById('v-b').classList.toggle('hidden', t === 'm');
-            document.getElementById('t-m').style.opacity = t === 'm' ? '1' : '0.3';
-            document.getElementById('t-b').style.opacity = t === 'b' ? '1' : '0.3';
-        }
+@keyframes scan {
+  0% { top: 0; }
+  100% { top: 100%; }
+}
+.scanner-line {
+  position: fixed; top: 0; left: 0; width: 100%; height: 1px;
+  background: linear-gradient(90deg, transparent, hsl(var(--gold) / 0.15), transparent);
+  animation: scan 6s linear infinite;
+  z-index: 50; pointer-events: none;
+}
 
-        const grid = document.getElementById('m-list');
-        inventory.forEach(i => {
-            const d = document.createElement('div');
-            d.className = "glass p-6 rounded-[35px] flex justify-between items-center";
-            d.innerHTML = `<div><span class="text-[7px] text-cyan-500 font-black tracking-widest">[ ${i.tag} ]</span><h3 class="font-black text-xs uppercase tracking-wider mb-1">${i.name}</h3><p class="text-lg font-black text-yellow-500">₹${i.price}</p></div>
-                <div class="flex space-x-3"><button onclick="toggleAR(true, '${i.file}')" class="w-12 h-12 glass rounded-full flex items-center justify-center text-lg">🌌</button>
-                <button onclick="add(${i.id})" class="bg-yellow-500 text-black px-6 py-4 rounded-2xl font-black text-[9px] uppercase tracking-widest">ADD +</button></div>`;
-            grid.appendChild(d);
-        });
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation: fade-up 0.6s ease-out both; }
 
-        function add(id) { cart.push(inventory.find(i => i.id === id)); updateUI(); }
+=====================================
+📁 tailwind.config.ts
+=====================================
 
-        function updateUI() {
-            document.getElementById('c-dot').innerText = cart.length;
-            const bl = document.getElementById('b-items'); bl.innerHTML = '';
-            let s = 0;
-            cart.forEach((i, idx) => { s += i.price; const r = document.createElement('div'); r.className = "glass p-4 rounded-2xl flex justify-between text-[10px] font-bold";
-                r.innerHTML = `<span>${i.name}</span> <div class="flex items-center space-x-4"><span>₹${i.price}</span><button onclick="remove(${idx})" class="text-red-500">✕</button></div>`;
-                bl.appendChild(r); });
-            const dAmt = Math.round(s * (bounty/100));
-            document.getElementById('f-total').innerText = `₹${s - dAmt}`;
-            if(bounty > 0) { document.getElementById('d-row').classList.remove('hidden'); document.getElementById('d-val').innerText = `-₹${dAmt}`; }
-        }
+import type { Config } from "tailwindcss";
 
-        function remove(idx) { cart.splice(idx, 1); updateUI(); }
+export default {
+  darkMode: ["class"],
+  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  prefix: "",
+  theme: {
+    container: { center: true, padding: "1rem", screens: { "2xl": "480px" } },
+    extend: {
+      fontFamily: {
+        display: ['Playfair Display', 'serif'],
+        body: ['Outfit', 'sans-serif'],
+      },
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: { DEFAULT: "hsl(var(--primary))", foreground: "hsl(var(--primary-foreground))" },
+        secondary: { DEFAULT: "hsl(var(--secondary))", foreground: "hsl(var(--secondary-foreground))" },
+        destructive: { DEFAULT: "hsl(var(--destructive))", foreground: "hsl(var(--destructive-foreground))" },
+        muted: { DEFAULT: "hsl(var(--muted))", foreground: "hsl(var(--muted-foreground))" },
+        accent: { DEFAULT: "hsl(var(--accent))", foreground: "hsl(var(--accent-foreground))" },
+        popover: { DEFAULT: "hsl(var(--popover))", foreground: "hsl(var(--popover-foreground))" },
+        card: { DEFAULT: "hsl(var(--card))", foreground: "hsl(var(--card-foreground))" },
+      },
+      borderRadius: { lg: "var(--radius)", md: "calc(var(--radius) - 2px)", sm: "calc(var(--radius) - 4px)" },
+      keyframes: {
+        "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },
+        "accordion-up": { from: { height: "var(--radix-accordion-content-height)" }, to: { height: "0" } },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+      },
+    },
+  },
+  plugins: [require("tailwindcss-animate")],
+} satisfies Config;
 
-        function startInsta() { window.open('https://instagram.com/daniyal.lone', '_blank'); setTimeout(() => { document.getElementById('loot-modal').style.display = 'flex'; }, 1000); }
+=====================================
+📁 src/data/menu.ts
+=====================================
 
-        function revealBounty() {
-            const ch = document.getElementById('chest-icon'); ch.innerText = "💥";
-            setTimeout(() => { bounty = 10; ch.innerHTML = `<span class="text-3xl text-yellow-500">10% OFF</span>`;
-                confetti({ particleCount: 200, spread: 100, colors: ['#ffcc00', '#00f3ff'] });
-                setTimeout(() => { document.getElementById('loot-modal').style.display = 'none';
-                    document.getElementById('f-box').innerHTML = `<div class="p-4 rounded-2xl bg-green-500/10 border border-green-500/30 text-center text-[8px] font-black text-green-400 tracking-[0.3em]">SYSTEM_BYPASS: 10% BOUNTY ACTIVE</div>`;
-                    updateUI(); }, 1500); }, 600); }
+export interface MenuItem {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  tag: string;
+  modelSrc: string;
+}
 
-        function toggleAR(s, f) {
-            const portal = document.getElementById('ar-portal');
-            if (s) {
-                if (f) document.getElementById('ar-view').src = f;
-                portal.style.display = 'flex';
-            } else {
-                portal.style.display = 'none';
-            }
-        }
+export const menuItems: MenuItem[] = [
+  { id: 1, name: "Artisan Cappuccino", description: "Rich espresso with velvet micro-foam", price: 250, tag: "SIGNATURE", modelSrc: "https://modelviewer.dev/shared-assets/models/Astronaut.glb" },
+  { id: 2, name: "Truffle Mushroom Burger", description: "Brioche bun, aged cheddar, truffle aioli", price: 450, tag: "CHEF'S PICK", modelSrc: "https://modelviewer.dev/shared-assets/models/Astronaut.glb" },
+  { id: 3, name: "Matcha Lava Cake", description: "Warm matcha center with vanilla bean dust", price: 350, tag: "DESSERT", modelSrc: "https://modelviewer.dev/shared-assets/models/Astronaut.glb" },
+  { id: 4, name: "Iced Hazelnut Macchiato", description: "Cold brew base, roasted hazelnut, sweet cream", price: 300, tag: "COLD BREW", modelSrc: "https://modelviewer.dev/shared-assets/models/Astronaut.glb" },
+];
 
-        function openPay() { if(!cart.length) return alert("GALLEY_EMPTY: Add items first!"); document.getElementById('pay-modal').style.display = 'flex'; }
-        function closePay() { document.getElementById('pay-modal').style.display = 'none'; }
+=====================================
+📁 src/pages/Index.tsx
+=====================================
 
-        function dispatchWA() {
-            const tot = document.getElementById('f-total').innerText;
-            const msg = encodeURIComponent(`⚡ MISSION DISPATCHED\nLOOT: ${cart.map(i => i.name).join(', ')}\nTOTAL: ${tot}\n\nProcessed via Sovereign OS v7.0`);
-            window.location.href = `https://wa.me/919103499618?text=${msg}`;
-            document.getElementById('upi-btn').classList.remove('opacity-40');
-            document.getElementById('upi-btn').classList.add('bg-cyan-500', 'text-black', 'border-none');
-        }
+import { useState } from "react";
+import { menuItems, MenuItem } from "@/data/menu";
+import MenuCard from "@/components/MenuCard";
+import CartView from "@/components/CartView";
+import ARViewer from "@/components/ARViewer";
+import BountyModal from "@/components/BountyModal";
+import PayModal from "@/components/PayModal";
 
-        function runUPI() {
-            const tot = document.getElementById('f-total').innerText.replace('₹', '');
-            const upi = "Lonedaniyal158-2@oksbi";
-            window.location.href = `upi://pay?pa=${upi}&pn=Pirates%20Hive&am=${tot}&cu=INR`;
-        }
-    </script>
-</body>
-</html>
+export interface CartItem extends MenuItem {
+  quantity: number;
+}
+
+type Tab = "menu" | "cart";
+
+const Index = () => {
+  const [tab, setTab] = useState("menu");
+  const [cart, setCart] = useState([]);
+  const [arItem, setArItem] = useState(null);
+  const [bounty, setBounty] = useState(0);
+  const [showLoot, setShowLoot] = useState(false);
+  const [showPay, setShowPay] = useState(false);
+  const [bountyClaimed, setBountyClaimed] = useState(false);
+
+  const addToCart = (item: MenuItem) => {
+    setCart((prev) => {
+      const existing = prev.find((c) => c.id === item.id);
+      if (existing) {
+        return prev.map((c) => c.id === item.id ? { ...c, quantity: c.quantity + 1 } : c);
+      }
+      return [...prev, { ...item, quantity: 1 }];
+    });
+  };
+
+  const updateQuantity = (id: number, delta: number) => {
+    setCart((prev) =>
+      prev
+        .map((c) => (c.id === id ? { ...c, quantity: c.quantity + delta } : c))
+        .filter((c) => c.quantity > 0)
+    );
+  };
+
+  const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
+  const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+  const discount = Math.round(subtotal * (bounty / 100));
+  const total = subtotal - discount;
+
+  const handleOrder = () => {
+    if (!cart.length) return;
+    setShowPay(true);
+  };
+
+  const startBounty = () => {
+    window.open("https://instagram.com/daniyal.lone", "_blank");
+    setTimeout(() => setShowLoot(true), 1000);
+  };
+
+  const onBountyRevealed = (disc: number) => {
+    setBounty(disc);
+    setBountyClaimed(true);
+  };
+
+  return (
+
+      {arItem &&  setArItem(null)} />}
+       setShowLoot(false)} onBountyRevealed={onBountyRevealed} />
+       `${i.name} x${i.quantity}`).join(", ")} onClose={() => setShowPay(false)} />
+
+        SHINRA
+        Architecting the digital layer of reality
+
+         setTab("menu")} className={`flex-1 py-3.5 glass-card rounded-2xl font-body font-bold text-[9px] tracking-[0.2em] uppercase transition-all ${tab === "menu" ? "text-gold border-gold-dim" : "text-muted-foreground opacity-40"}`}>Menu
+         setTab("cart")} className={`flex-1 py-3.5 glass-card rounded-2xl font-body font-bold text-[9px] tracking-[0.2em] uppercase transition-all ${tab === "cart" ? "text-gold border-gold-dim" : "text-muted-foreground opacity-40"}`}>Order ({cartCount})
+
+        {tab === "menu" ? (
+
+            {menuItems.map((item, i) => (
+               setArItem(item)} index={i} />
+            ))}
+
+        ) : (
+
+        )}
+
+          {!bountyClaimed ? (
+            [ Claim 10% Bounty ]
+          ) : (
+            SYSTEM_BYPASS: 10% BOUNTY ACTIVE
+          )}
+
+            Place Order{cartCount > 0 ? ` · ₹${total}` : ""}
+
+  );
+};
+
+export default Index;
+
+=====================================
+📁 src/components/MenuCard.tsx
+=====================================
+
+import { useState } from "react";
+import { MenuItem } from "@/data/menu";
+
+interface MenuCardProps {
+  item: MenuItem;
+  onAdd: (item: MenuItem) => void;
+  onViewAR: (item: MenuItem) => void;
+  index: number;
+}
+
+const MenuCard = ({ item, onAdd, onViewAR, index }: MenuCardProps) => {
+  const [added, setAdded] = useState(false);
+
+  const handleAdd = () => {
+    onAdd(item);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 800);
+  };
+
+  return (
+
+      {item.tag}
+      {item.name}
+      {item.description}
+
+        ₹{item.price}
+
+           onViewAR(item)} className="glass-card rounded-xl px-3 py-2.5 text-[9px] font-bold tracking-[0.15em] text-accent uppercase font-body hover:border-accent/40 transition-colors">View 3D
+
+            {added ? "Added ✓" : "Add +"}
+
+  );
+};
+
+export default MenuCard;
+
+=====================================
+📁 src/components/CartView.tsx
+=====================================
+
+import { CartItem } from "@/pages/Index";
+
+interface CartViewProps {
+  items: CartItem[];
+  onUpdateQuantity: (id: number, delta: number) => void;
+  discount?: number;
+}
+
+const CartView = ({ items, onUpdateQuantity, discount = 0 }: CartViewProps) => {
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const discountAmt = Math.round(subtotal * (discount / 100));
+  const total = subtotal - discountAmt;
+
+  if (items.length === 0) {
+    return (
+
+        Your order is empty
+        Browse the menu and add items
+
+    );
+  }
+
+  return (
+
+      Current Order
+
+        {items.map((item) => (
+
+              {item.name}
+              ₹{item.price} each
+
+                 onUpdateQuantity(item.id, -1)} className="w-7 h-7 rounded-lg glass-card border border-gold/20 text-gold text-sm font-bold font-body flex items-center justify-center hover:border-gold/50 transition-colors">−
+                {item.quantity}
+                 onUpdateQuantity(item.id, 1)} className="w-7 h-7 rounded-lg glass-card border border-gold/20 text-gold text-sm font-bold font-body flex items-center justify-center hover:border-gold/50 transition-colors">+
+
+              ₹{item.price * item.quantity}
+
+        ))}
+
+        {discount > 0 && (
+
+            BOUNTY APPLIED
+            -₹{discountAmt}
+
+        )}
+
+          Total
+          ₹{total}
+
+  );
+};
+
+export default CartView;
+
+=====================================
+📁 src/components/PayModal.tsx
+=====================================
+
+import { useState } from "react";
+
+interface PayModalProps {
+  open: boolean;
+  total: number;
+  cartSummary: string;
+  onClose: () => void;
+}
+
+const WA_NUMBER = "919103499618";
+const UPI_ID = "lonedaniyal158-2@oksbi";
+
+const PayModal = ({ open, total, cartSummary, onClose }: PayModalProps) => {
+  const [dispatched, setDispatched] = useState(false);
+
+  if (!open) return null;
+
+  const dispatchWA = () => {
+    const msg = encodeURIComponent(`🔷 SHINRA ORDER\nItems: ${cartSummary}\nTotal: ₹${total}\n\nProcessed via SHINRA v1.0`);
+    window.open(`https://wa.me/${WA_NUMBER}?text=${msg}`, "_blank");
+    setDispatched(true);
+  };
+
+  const runUPI = () => {
+    window.location.href = `upi://pay?pa=${UPI_ID}&pn=SHINRA&am=${total}&cu=INR`;
+  };
+
+  return (
+
+        Settle Protocol
+
+          ⚓ Dispatch Order (WA)
+          ⚡ Settle Bill (UPI) · ₹{total}
+
+         { onClose(); setDispatched(false); }} className="w-full text-[10px] font-body text-muted-foreground opacity-40 uppercase tracking-[0.2em]">Return to Menu
+
+  );
+};
+
+export default PayModal;
+
+=====================================
+📁 src/components/BountyModal.tsx
+=====================================
+
+import { useState } from "react";
+import confetti from "canvas-confetti";
+
+interface BountyModalProps {
+  open: boolean;
+  onClose: () => void;
+  onBountyRevealed: (discount: number) => void;
+}
+
+const BountyModal = ({ open, onClose, onBountyRevealed }: BountyModalProps) => {
+  const [stage, setStage] = useState<"chest" | "revealed">("chest");
+
+  if (!open) return null;
+
+  const revealBounty = () => {
+    setStage("revealed");
+    confetti({ particleCount: 200, spread: 100, colors: ["#EAB308", "#00f3ff"] });
+    setTimeout(() => {
+      onBountyRevealed(10);
+      onClose();
+      setStage("chest");
+    }, 1800);
+  };
+
+  return (
+
+        LOOT FOUND
+        {stage === "chest" ? "🎁" : "💥"}
+        {stage === "chest" ? (
+          Open Chest
+        ) : (
+          10% OFF
+        )}
+
+  );
+};
+
+export default BountyModal;
+
+=====================================
+📁 src/components/ARViewer.tsx
+=====================================
+
+import { MenuItem } from "@/data/menu";
+
+interface ARViewerProps {
+  item: MenuItem | null;
+  onClose: () => void;
+}
+
+const ARViewer = ({ item, onClose }: ARViewerProps) => {
+  if (!item) return null;
+
+  return (
+
+        ✕ Close
+        {item.name}
+
+        {/* @ts-ignore */}
+
+          🪄 View on Table
+
+  );
+};
